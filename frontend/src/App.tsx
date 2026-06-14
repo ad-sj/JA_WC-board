@@ -17,6 +17,8 @@ function App() {
   const [updatedAt, setUpdatedAt] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
+  const [showAllResults, setShowAllResults] = useState(false);
+  const [showAllScheduled, setShowAllScheduled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,9 +87,17 @@ function App() {
     };
   }, [selectedUser]);
 
-  const liveMatches = matches.filter((match) => match.status === 'live');
-  const upcomingMatches = matches.filter((match) => match.status === 'scheduled');
-  const finishedMatches = matches.filter((match) => match.status === 'finished');
+  const finishedMatches = matches
+    .filter((match) => match.status === 'finished')
+    .sort((a, b) => a.matchId - b.matchId);
+
+  const liveMatches = matches
+    .filter((match) => match.status === 'live')
+    .sort((a, b) => a.matchId - b.matchId);
+
+  const scheduledMatches = matches
+    .filter((match) => match.status === 'scheduled')
+    .sort((a, b) => a.matchId - b.matchId);
 
   return (
     <main className="page-shell">
@@ -189,9 +199,36 @@ function App() {
             <span>{matches.length} group-stage fixtures</span>
           </div>
 
+          <MatchSection
+            title="Results"
+            items={showAllResults ? finishedMatches : finishedMatches.slice(-4)}
+            showResults
+            toggleText={
+              finishedMatches.length > 4
+                ? showAllResults
+                  ? 'Hide older results'
+                  : `Show all ${finishedMatches.length} results`
+                : null
+            }
+            onToggle={() => setShowAllResults((value) => !value)}
+            togglePlacement="before"
+          />
+
           <MatchSection title="Live" items={liveMatches} live />
-          <MatchSection title="Upcoming" items={upcomingMatches} />
-          <MatchSection title="Finished" items={finishedMatches} showResults />
+
+          <MatchSection
+            title="Scheduled"
+            items={showAllScheduled ? scheduledMatches : scheduledMatches.slice(0, 4)}
+            toggleText={
+              scheduledMatches.length > 4
+                ? showAllScheduled
+                  ? 'Hide later scheduled matches'
+                  : `Show all scheduled matches (${scheduledMatches.length})`
+                : null
+            }
+            onToggle={() => setShowAllScheduled((value) => !value)}
+            togglePlacement="after"
+          />
         </article>
       </section>
     </main>
@@ -203,12 +240,24 @@ function MatchSection({
   items,
   live = false,
   showResults = false,
+  toggleText = null,
+  onToggle,
+  togglePlacement = 'before',
 }: {
   title: string;
   items: MatchItem[];
   live?: boolean;
   showResults?: boolean;
+  toggleText?: string | null;
+  onToggle?: () => void;
+  togglePlacement?: 'before' | 'after';
 }) {
+  const toggleRow = toggleText && onToggle ? (
+    <button className="match-toggle-row" type="button" onClick={onToggle}>
+      <span>{toggleText}</span>
+    </button>
+  ) : null;
+
   return (
     <section className="match-section">
       <div className="match-section-header">
@@ -220,6 +269,7 @@ function MatchSection({
         <div className="empty-state">No matches in this section.</div>
       ) : (
         <div className="match-list">
+          {togglePlacement === 'before' ? toggleRow : null}
           {items.map((match) => {
             const winner = getWinner(match);
 
@@ -243,6 +293,7 @@ function MatchSection({
               </div>
             );
           })}
+          {togglePlacement === 'after' ? toggleRow : null}
         </div>
       )}
     </section>

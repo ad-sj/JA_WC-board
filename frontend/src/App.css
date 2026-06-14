@@ -207,6 +207,22 @@
   gap: 12px;
 }
 
+.match-toggle-row {
+  width: 100%;
+  border: 1px dashed rgba(16, 60, 109, 0.22);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(248, 244, 234, 0.92);
+  color: #103c6d;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+
+.match-toggle-row:hover {
+  background: #e6dac1;
+}
+
 .match-card {
   padding: 14px 16px;
   border-radius: 18px;
