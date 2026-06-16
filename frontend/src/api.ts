@@ -33,34 +33,52 @@ export interface UserSummary {
   matches: UserMatchScore[];
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+interface DashboardData {
+  generatedAt: string;
+  matches: MatchItem[];
+  leaderboard: LeaderboardEntry[];
+  userSummaries: Record<string, UserSummary>;
+}
 
-export async function fetchMatches(): Promise<MatchItem[]> {
-  const response = await fetch(`${API_BASE}/api/matches`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch matches');
+const DASHBOARD_PATH = `${import.meta.env.BASE_URL}data/dashboard.json`;
+let dashboardDataPromise: Promise<DashboardData> | null = null;
+
+async function loadDashboardData(): Promise<DashboardData> {
+  if (!dashboardDataPromise) {
+    dashboardDataPromise = fetch(DASHBOARD_PATH).then((response) => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      return response.json() as Promise<DashboardData>;
+    });
   }
 
-  return response.json();
+  return dashboardDataPromise;
+}
+
+export async function fetchMatches(): Promise<MatchItem[]> {
+  const dashboardData = await loadDashboardData();
+  return dashboardData.matches;
 }
 
 export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
-  const response = await fetch(`${API_BASE}/api/leaderboard`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch leaderboard');
-  }
-
-  return response.json();
+  const dashboardData = await loadDashboardData();
+  return dashboardData.leaderboard;
 }
 
 export async function fetchUserSummary(username: string): Promise<UserSummary> {
-  const response = await fetch(
-    `${API_BASE}/api/users/${encodeURIComponent(username)}`,
-  );
+  const dashboardData = await loadDashboardData();
+  const summary = dashboardData.userSummaries[username];
 
-  if (!response.ok) {
+  if (!summary) {
     throw new Error('Failed to fetch user summary');
   }
 
-  return response.json();
+  return summary;
+}
+
+export async function fetchGeneratedAt(): Promise<string> {
+  const dashboardData = await loadDashboardData();
+  return dashboardData.generatedAt;
 }

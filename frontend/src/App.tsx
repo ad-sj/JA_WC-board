@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import {
+  fetchGeneratedAt,
   fetchLeaderboard,
   fetchMatches,
   fetchUserSummary,
@@ -28,9 +29,10 @@ function App() {
         setIsLoading(true);
         setError(null);
 
-        const [matchesData, leaderboardData] = await Promise.all([
+        const [matchesData, leaderboardData, generatedAt] = await Promise.all([
           fetchMatches(),
           fetchLeaderboard(),
+          fetchGeneratedAt(),
         ]);
 
         if (cancelled) {
@@ -39,7 +41,12 @@ function App() {
 
         setMatches(matchesData);
         setLeaderboard(leaderboardData);
-        setUpdatedAt(new Date().toLocaleTimeString('sv-SE'));
+        setUpdatedAt(
+          new Date(generatedAt).toLocaleString('sv-SE', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          }),
+        );
         setSelectedUser((current) => current ?? leaderboardData[0]?.username ?? null);
       } catch (err) {
         if (!cancelled) {
@@ -112,7 +119,7 @@ function App() {
         <div className="status-card">
           <span className="status-label">Refresh</span>
           <strong>{updatedAt || 'Pending'}</strong>
-          <span className="status-note">Updates on page reload</span>
+          <span className="status-note">Updated when static data is regenerated</span>
         </div>
       </section>
 
