@@ -114,6 +114,9 @@ function App() {
     ? leaderboard.find((entry) => entry.username === selectedUser) ?? null
     : null;
 
+  const participantCount = leaderboard.length;
+  const selectedParticipantLabel = selectedUser ?? 'Select a participant';
+
   const rankCounts = leaderboard.reduce<Record<number, number>>((acc, entry) => {
     acc[entry.rank] = (acc[entry.rank] ?? 0) + 1;
     return acc;
@@ -126,34 +129,145 @@ function App() {
 
   return (
     <main className="page-shell">
-      <section className="hero-banner">
-        <div>
+      <header className="masthead">
+        <div className="masthead-copy">
           <p className="eyebrow">FIFA World Cup 2026</p>
           <h1>Prediction Dashboard</h1>
           <p className="hero-copy">
-            Group-stage leaderboard, fixtures, and final results from the 72-match schedule.
+            Live fixtures, finished matches, and each participant&apos;s prediction performance in a
+            flat, mobile-first dashboard.
           </p>
         </div>
-        <div className="status-card">
-          <span className="status-label">Refresh</span>
+
+        <div className="status-card" aria-label="Refresh status">
+          <span className="status-label">Latest refresh</span>
           <strong>{updatedAt || 'Pending'}</strong>
-          <span className="status-note">Updated when static data is regenerated</span>
+          <span className="status-note">Static data updates whenever the dashboard payload is rebuilt</span>
+        </div>
+      </header>
+
+      <section className="hero-banner">
+        <div className="hero-copy-block">
+          <p className="hero-kicker">Selected participant</p>
+          <div className="focus-card">
+            <strong>{selectedParticipantLabel}</strong>
+            <span>
+              {selectedLeaderboardEntry
+                ? `${selectedLeaderboardEntry.totalPoints} points overall`
+                : 'Choose a participant to compare predictions against every match'}
+            </span>
+          </div>
+
+          <div className="hero-metrics" aria-label="Dashboard summary">
+            <div className="metric-chip metric-chip-primary">
+              <span className="metric-label">Participants</span>
+              <strong>{participantCount}</strong>
+            </div>
+            <div className="metric-chip metric-chip-secondary">
+              <span className="metric-label">Finished</span>
+              <strong>{finishedMatches.length}</strong>
+            </div>
+            <div className="metric-chip metric-chip-accent">
+              <span className="metric-label">Live</span>
+              <strong>{liveMatches.length}</strong>
+            </div>
+            <div className="metric-chip metric-chip-muted">
+              <span className="metric-label">Scheduled</span>
+              <strong>{scheduledMatches.length}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-art" aria-hidden="true">
+          <div className="art-circle art-circle-large" />
+          <div className="art-circle art-circle-small" />
+          <div className="art-square art-square-large" />
+          <div className="art-square art-square-small" />
+          <div className="art-band" />
         </div>
       </section>
 
-      <section className="rule-strip">
-        <span>1 point: prediction submitted but wrong outcome</span>
-        <span>3 points: correct winner or draw</span>
-        <span>5 points: exact score</span>
+      <section className="rule-strip" aria-label="Scoring rules">
+        <article className="rule-card rule-card-primary">
+          <span className="rule-label">1 point</span>
+          <strong>Prediction submitted but wrong outcome</strong>
+        </article>
+        <article className="rule-card rule-card-secondary">
+          <span className="rule-label">3 points</span>
+          <strong>Correct winner or draw</strong>
+        </article>
+        <article className="rule-card rule-card-accent">
+          <span className="rule-label">5 points</span>
+          <strong>Exact score</strong>
+        </article>
       </section>
 
       {error ? <section className="error-panel">{error}</section> : null}
       {isLoading ? <section className="loading-panel">Loading dashboard…</section> : null}
 
       <section className="content-grid">
+        <article className="panel matches-panel">
+          <div className="panel-header">
+            <div>
+              <p className="panel-kicker">Match centre</p>
+              <h2>Matches</h2>
+            </div>
+            <span>{matches.length} group-stage fixtures</span>
+          </div>
+
+          <div className="selected-participant-banner">
+            <span className="selected-participant-label">Comparing against</span>
+            <strong>{selectedParticipantLabel}</strong>
+          </div>
+
+          <MatchSection
+            title="Live"
+            items={liveMatches}
+            live
+            participantLabel={selectedParticipantLabel}
+            userMatchById={userMatchById}
+          />
+
+          <MatchSection
+            title="Results"
+            items={showAllResults ? finishedMatches : finishedMatches.slice(-4)}
+            showResults
+            toggleText={
+              finishedMatches.length > 4
+                ? showAllResults
+                  ? 'Hide older results'
+                  : `Show all ${finishedMatches.length} results`
+                : null
+            }
+            onToggle={() => setShowAllResults((value) => !value)}
+            togglePlacement="before"
+            participantLabel={selectedParticipantLabel}
+            userMatchById={userMatchById}
+          />
+
+          <MatchSection
+            title="Scheduled"
+            items={showAllScheduled ? scheduledMatches : scheduledMatches.slice(0, 4)}
+            toggleText={
+              scheduledMatches.length > 4
+                ? showAllScheduled
+                  ? 'Hide later scheduled matches'
+                  : `Show all scheduled matches (${scheduledMatches.length})`
+                : null
+            }
+            onToggle={() => setShowAllScheduled((value) => !value)}
+            togglePlacement="after"
+            participantLabel={selectedParticipantLabel}
+            userMatchById={userMatchById}
+          />
+        </article>
+
         <article className="panel leaderboard-panel">
           <div className="panel-header">
-            <h2>Leaderboard</h2>
+            <div>
+              <p className="panel-kicker">Standings</p>
+              <h2>Leaderboard</h2>
+            </div>
             <span>{leaderboard.length} participants</span>
           </div>
 
@@ -180,6 +294,7 @@ function App() {
                   className={selectedUser === entry.username ? 'row row-button is-selected' : 'row row-button'}
                   key={entry.username}
                   onClick={() => setSelectedUser(entry.username)}
+                  aria-pressed={selectedUser === entry.username}
                   type="button"
                 >
                   <span>{tiedRanks.has(entry.rank) ? `T${entry.rank}` : `${entry.rank}`}</span>
@@ -189,54 +304,6 @@ function App() {
               ))
             )}
           </div>
-        </article>
-
-        <article className="panel matches-panel">
-          <div className="panel-header">
-            <h2>Matches</h2>
-            <span>{matches.length} group-stage fixtures</span>
-          </div>
-
-          <MatchSection
-            title="Results"
-            items={showAllResults ? finishedMatches : finishedMatches.slice(-4)}
-            showResults
-            toggleText={
-              finishedMatches.length > 4
-                ? showAllResults
-                  ? 'Hide older results'
-                  : `Show all ${finishedMatches.length} results`
-                : null
-            }
-            onToggle={() => setShowAllResults((value) => !value)}
-            togglePlacement="before"
-            selectedUser={selectedUser}
-            userMatchById={userMatchById}
-          />
-
-          <MatchSection
-            title="Live"
-            items={liveMatches}
-            live
-            selectedUser={selectedUser}
-            userMatchById={userMatchById}
-          />
-
-          <MatchSection
-            title="Scheduled"
-            items={showAllScheduled ? scheduledMatches : scheduledMatches.slice(0, 4)}
-            toggleText={
-              scheduledMatches.length > 4
-                ? showAllScheduled
-                  ? 'Hide later scheduled matches'
-                  : `Show all scheduled matches (${scheduledMatches.length})`
-                : null
-            }
-            onToggle={() => setShowAllScheduled((value) => !value)}
-            togglePlacement="after"
-            selectedUser={selectedUser}
-            userMatchById={userMatchById}
-          />
         </article>
       </section>
     </main>
@@ -251,7 +318,7 @@ function MatchSection({
   toggleText = null,
   onToggle,
   togglePlacement = 'before',
-  selectedUser,
+  participantLabel,
   userMatchById,
 }: {
   title: string;
@@ -261,7 +328,7 @@ function MatchSection({
   toggleText?: string | null;
   onToggle?: () => void;
   togglePlacement?: 'before' | 'after';
-  selectedUser: string | null;
+  participantLabel: string;
   userMatchById: Map<number, UserMatchScore>;
 }) {
   const toggleRow = toggleText && onToggle ? (
@@ -285,37 +352,65 @@ function MatchSection({
           {items.map((match) => {
             const winner = getWinner(match);
             const userMatch = userMatchById.get(match.matchId);
+            const hasOfficialScore = match.homeScore !== null && match.awayScore !== null;
             const pointsLabel =
-              match.status === 'finished' && match.homeScore !== null && match.awayScore !== null
-                ? `${userMatch?.points ?? 0} pts`
-                : '-';
+              match.status === 'finished' && hasOfficialScore ? `${userMatch?.points ?? 0} pts` : 'Pending';
+            const officialValue = hasOfficialScore ? `${match.homeScore}-${match.awayScore}` : 'VS';
+            const officialLabel = live ? 'Current score' : showResults ? 'Official result' : 'Kickoff';
+            const predictionValue = userMatch?.prediction
+              ? `${userMatch.prediction.homeGoals}-${userMatch.prediction.awayGoals}`
+              : 'No pick';
+            const predictionNote = hasOfficialScore
+              ? pointsLabel
+              : userMatch?.prediction
+                ? 'Prediction saved'
+                : 'No prediction submitted';
 
             return (
-              <div className="match-card" key={match.matchId}>
+              <div
+                className={
+                  match.status === 'live'
+                    ? 'match-card is-live'
+                    : match.status === 'finished'
+                      ? 'match-card is-finished'
+                      : 'match-card is-scheduled'
+                }
+                key={match.matchId}
+              >
                 <div className="match-meta">
-                  <span>Match {match.matchId}</span>
-                  <span>{match.dateRaw} {match.timeRaw}</span>
+                  <span className="match-number">Match {match.matchId}</span>
+                  <span className="match-kickoff">{match.dateRaw} {match.timeRaw}</span>
                   {live ? <span className="live-pill">LIVE</span> : null}
                 </div>
 
                 <div className="teams">
-                  <div className={winner === 'home' ? 'team winner' : 'team'}>{match.homeTeam}</div>
-                  <div className="score-block">
-                    {showResults && match.homeScore !== null && match.awayScore !== null
-                      ? `${match.homeScore} - ${match.awayScore}`
-                      : 'vs'}
+                  <div className={winner === 'home' ? 'team winner team-block' : 'team team-block'}>
+                    <span className="team-side">Home</span>
+                    <strong>{match.homeTeam}</strong>
                   </div>
-                  <div className={winner === 'away' ? 'team winner' : 'team'}>{match.awayTeam}</div>
+                  <div className="score-block" aria-label={officialLabel}>
+                    {officialValue}
+                  </div>
+                  <div className={winner === 'away' ? 'team winner team-block' : 'team team-block'}>
+                    <span className="team-side">Away</span>
+                    <strong>{match.awayTeam}</strong>
+                  </div>
                 </div>
 
-                <div className="prediction-row">
-                  <span className="prediction-user">{selectedUser ?? 'No participant selected'}</span>
-                  <span className="prediction-score">
-                    {userMatch?.prediction
-                      ? `${userMatch.prediction.homeGoals}-${userMatch.prediction.awayGoals}`
-                      : 'No pick'}
-                  </span>
-                  <strong className="prediction-points">{pointsLabel}</strong>
+                <div className="prediction-grid">
+                  <div className="prediction-panel">
+                    <span className="prediction-label">{officialLabel}</span>
+                    <strong className="prediction-score prediction-score-official">{officialValue}</strong>
+                    <span className="prediction-meta">
+                      {hasOfficialScore ? 'Recorded result' : `${match.dateRaw} ${match.timeRaw}`}
+                    </span>
+                  </div>
+
+                  <div className="prediction-panel prediction-panel-user">
+                    <span className="prediction-label">{participantLabel}</span>
+                    <strong className="prediction-score prediction-score-user">{predictionValue}</strong>
+                    <span className="prediction-meta">{predictionNote}</span>
+                  </div>
                 </div>
               </div>
             );

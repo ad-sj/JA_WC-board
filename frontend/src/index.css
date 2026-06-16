@@ -1,13 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
 :root {
-  font-family: Inter, 'Segoe UI', sans-serif;
+  color-scheme: light;
+  font-family: var(--font-ui);
   line-height: 1.5;
   font-weight: 400;
-  color: #1e232a;
-  background: #efe7d4;
+  color: var(--foreground);
+  background: var(--background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --background: #ffffff;
+  --foreground: #111827;
+  --primary: #3b82f6;
+  --secondary: #10b981;
+  --accent: #f59e0b;
+  --muted: #f3f4f6;
+  --border: #e5e7eb;
+  --primary-soft: #dbeafe;
+  --secondary-soft: #d1fae5;
+  --accent-soft: #fef3c7;
+  --font-ui: 'Outfit', 'Segoe UI', sans-serif;
 }
 
 * {
@@ -23,6 +38,10 @@ body,
 
 body {
   min-width: 320px;
+  background:
+    linear-gradient(180deg, rgba(243, 244, 246, 0.85) 0%, rgba(255, 255, 255, 1) 18%),
+    var(--background);
+  color: var(--foreground);
 }
 
 button,
@@ -30,4 +49,12 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
 }
