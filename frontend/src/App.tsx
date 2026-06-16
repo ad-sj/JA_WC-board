@@ -7,6 +7,7 @@ import {
   fetchUserSummary,
   type LeaderboardEntry,
   type MatchItem,
+  type UserMatchScore,
   type UserSummary,
 } from './api';
 
@@ -106,6 +107,23 @@ function App() {
     .filter((match) => match.status === 'scheduled')
     .sort((a, b) => a.matchId - b.matchId);
 
+  const userMatchById = new Map<number, UserMatchScore>(
+    userSummary?.matches.map((item) => [item.match.matchId, item]) ?? [],
+  );
+  const selectedLeaderboardEntry = selectedUser
+    ? leaderboard.find((entry) => entry.username === selectedUser) ?? null
+    : null;
+
+  const rankCounts = leaderboard.reduce<Record<number, number>>((acc, entry) => {
+    acc[entry.rank] = (acc[entry.rank] ?? 0) + 1;
+    return acc;
+  }, {});
+  const tiedRanks = new Set(
+    Object.entries(rankCounts)
+      .filter(([, count]) => count > 1)
+      .map(([rank]) => Number(rank)),
+  );
+
   return (
     <main className="page-shell">
       <section className="hero-banner">
@@ -139,6 +157,15 @@ function App() {
             <span>{leaderboard.length} participants</span>
           </div>
 
+          <div className="leaderboard-selected-summary">
+            <span>Selected</span>
+            <strong>
+              {selectedUser
+                ? `${selectedUser} · ${selectedLeaderboardEntry?.totalPoints ?? 0} pts`
+                : 'None selected'}
+            </strong>
+          </div>
+
           <div className="leaderboard-table">
             <div className="leaderboard-head row">
               <span>Rank</span>
@@ -155,47 +182,11 @@ function App() {
                   onClick={() => setSelectedUser(entry.username)}
                   type="button"
                 >
-                  <span>#{entry.rank}</span>
+                  <span>{tiedRanks.has(entry.rank) ? `T${entry.rank}` : `${entry.rank}`}</span>
                   <span>{entry.username}</span>
                   <strong>{entry.totalPoints}</strong>
                 </button>
               ))
-            )}
-          </div>
-
-          <div className="user-summary-panel">
-            <div className="panel-header compact">
-              <h2>Participant</h2>
-              <span>{selectedUser ?? 'None selected'}</span>
-            </div>
-
-            {userSummary ? (
-              <>
-                <div className="summary-total">{userSummary.totalPoints} pts</div>
-                <div className="user-match-list">
-                  {userSummary.matches.map((item) => (
-                    <div className="user-match-row" key={item.match.matchId}>
-                      <span>
-                        {item.match.matchId}. {item.match.homeTeam} - {item.match.awayTeam}
-                      </span>
-                      <span>
-                        {item.prediction
-                          ? `${item.prediction.homeGoals}-${item.prediction.awayGoals}`
-                          : 'No pick'}
-                      </span>
-                      <strong>
-                        {item.match.status === 'finished' &&
-                        item.match.homeScore !== null &&
-                        item.match.awayScore !== null
-                          ? item.points
-                          : '-'}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="empty-state">Select a participant to inspect scored matches.</div>
             )}
           </div>
         </article>
@@ -219,9 +210,17 @@ function App() {
             }
             onToggle={() => setShowAllResults((value) => !value)}
             togglePlacement="before"
+            selectedUser={selectedUser}
+            userMatchById={userMatchById}
           />
 
-          <MatchSection title="Live" items={liveMatches} live />
+          <MatchSection
+            title="Live"
+            items={liveMatches}
+            live
+            selectedUser={selectedUser}
+            userMatchById={userMatchById}
+          />
 
           <MatchSection
             title="Scheduled"
@@ -235,6 +234,8 @@ function App() {
             }
             onToggle={() => setShowAllScheduled((value) => !value)}
             togglePlacement="after"
+            selectedUser={selectedUser}
+            userMatchById={userMatchById}
           />
         </article>
       </section>
@@ -250,6 +251,8 @@ function MatchSection({
   toggleText = null,
   onToggle,
   togglePlacement = 'before',
+  selectedUser,
+  userMatchById,
 }: {
   title: string;
   items: MatchItem[];
@@ -258,6 +261,8 @@ function MatchSection({
   toggleText?: string | null;
   onToggle?: () => void;
   togglePlacement?: 'before' | 'after';
+  selectedUser: string | null;
+  userMatchById: Map<number, UserMatchScore>;
 }) {
   const toggleRow = toggleText && onToggle ? (
     <button className="match-toggle-row" type="button" onClick={onToggle}>
@@ -279,6 +284,11 @@ function MatchSection({
           {togglePlacement === 'before' ? toggleRow : null}
           {items.map((match) => {
             const winner = getWinner(match);
+            const userMatch = userMatchById.get(match.matchId);
+            const pointsLabel =
+              match.status === 'finished' && match.homeScore !== null && match.awayScore !== null
+                ? `${userMatch?.points ?? 0} pts`
+                : '-';
 
             return (
               <div className="match-card" key={match.matchId}>
@@ -296,6 +306,16 @@ function MatchSection({
                       : 'vs'}
                   </div>
                   <div className={winner === 'away' ? 'team winner' : 'team'}>{match.awayTeam}</div>
+                </div>
+
+                <div className="prediction-row">
+                  <span className="prediction-user">{selectedUser ?? 'No participant selected'}</span>
+                  <span className="prediction-score">
+                    {userMatch?.prediction
+                      ? `${userMatch.prediction.homeGoals}-${userMatch.prediction.awayGoals}`
+                      : 'No pick'}
+                  </span>
+                  <strong className="prediction-points">{pointsLabel}</strong>
                 </div>
               </div>
             );

@@ -128,6 +128,22 @@
   gap: 10px;
 }
 
+.leaderboard-selected-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #efe2c8;
+  color: #173a61;
+}
+
+.leaderboard-selected-summary strong {
+  font-size: 0.95rem;
+}
+
 .row {
   padding: 12px 14px;
   border-radius: 14px;
@@ -144,6 +160,18 @@
 .row-button:hover,
 .row-button.is-selected {
   background: #e6dac1;
+}
+
+.row-button.is-selected {
+  border: 1px solid rgba(16, 60, 109, 0.42);
+  background: linear-gradient(90deg, #d7e4f8 0%, #e8dcc3 100%);
+  box-shadow: 0 10px 20px rgba(16, 60, 109, 0.14);
+  transform: translateY(-1px);
+}
+
+.row-button.is-selected strong {
+  color: #0d3a66;
+  font-size: 1.06rem;
 }
 
 .leaderboard-head {
@@ -165,37 +193,6 @@
 
 .match-section + .match-section {
   margin-top: 22px;
-}
-
-.compact {
-  margin-top: 20px;
-}
-
-.user-summary-panel {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(16, 60, 109, 0.12);
-}
-
-.summary-total {
-  margin-bottom: 12px;
-  font-size: 2rem;
-  font-weight: 800;
-  color: #103c6d;
-}
-
-.user-match-list {
-  display: grid;
-  gap: 10px;
-}
-
-.user-match-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: #f8f4ea;
 }
 
 .match-section-header {
@@ -259,6 +256,33 @@
   color: #103c6d;
 }
 
+.prediction-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(16, 60, 109, 0.22);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.prediction-user {
+  color: #44505e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prediction-score {
+  font-weight: 700;
+  color: #173a61;
+}
+
+.prediction-points {
+  color: #0d5a37;
+}
+
 .live-pill {
   padding: 4px 10px;
   border-radius: 999px;
@@ -299,6 +323,11 @@
   .score-block,
   .team:last-child {
     text-align: left;
+  }
+
+  .prediction-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .team + .score-block,
