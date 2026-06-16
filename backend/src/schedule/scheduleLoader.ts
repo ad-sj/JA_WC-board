@@ -16,9 +16,11 @@ export interface GroupMatch {
   awayScore: number | null;
 }
 
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+
 const DEFAULT_SCHEDULE_PATH = path.resolve(
   process.env.MATCH_SCHEDULE_FILE ||
-    '/home/adam/Documents/JA_WC-board/temp/matches.csv',
+    path.join(REPO_ROOT, 'temp/matches.csv'),
 );
 
 export async function loadSchedule(

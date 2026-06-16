@@ -9,8 +9,10 @@ export interface Prediction {
   awayGoals: number;
 }
 
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+
 const DEFAULT_PREDICTIONS_DIR = process.env.PREDICTIONS_DIR ||
-  path.resolve('/home/adam/Documents/JA_WC-board/predictions');
+  path.join(REPO_ROOT, 'predictions');
 
 export async function loadPredictions(
   predictionsDir: string = DEFAULT_PREDICTIONS_DIR,

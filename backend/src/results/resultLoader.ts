@@ -9,9 +9,11 @@ export interface MatchResult {
   awayScore: number;
 }
 
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+
 const DEFAULT_RESULTS_PATH = path.resolve(
   process.env.RESULTS_FILE ||
-    '/home/adam/Documents/JA_WC-board/temp/results.csv',
+    path.join(REPO_ROOT, 'temp/results.csv'),
 );
 
 export function getDefaultResultsPath(): string {

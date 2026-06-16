@@ -9,8 +9,9 @@ exports.applyResultsToMatches = applyResultsToMatches;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const csv_parse_1 = require("csv-parse");
+const REPO_ROOT = path_1.default.resolve(__dirname, '../../..');
 const DEFAULT_RESULTS_PATH = path_1.default.resolve(process.env.RESULTS_FILE ||
-    '/home/adam/Documents/JA_WC-board/temp/results.csv');
+    path_1.default.join(REPO_ROOT, 'temp/results.csv'));
 function getDefaultResultsPath() {
     return DEFAULT_RESULTS_PATH;
 }

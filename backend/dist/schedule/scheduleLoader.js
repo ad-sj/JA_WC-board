@@ -7,8 +7,9 @@ exports.loadSchedule = loadSchedule;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const csv_parse_1 = require("csv-parse");
+const REPO_ROOT = path_1.default.resolve(__dirname, '../../..');
 const DEFAULT_SCHEDULE_PATH = path_1.default.resolve(process.env.MATCH_SCHEDULE_FILE ||
-    '/home/adam/Documents/JA_WC-board/temp/matches.csv');
+    path_1.default.join(REPO_ROOT, 'temp/matches.csv'));
 async function loadSchedule(schedulePath = DEFAULT_SCHEDULE_PATH) {
     const csvContent = await fs_1.default.promises.readFile(schedulePath, 'utf8');
     return new Promise((resolve, reject) => {

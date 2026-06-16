@@ -7,8 +7,9 @@ exports.loadPredictions = loadPredictions;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const csv_parse_1 = require("csv-parse");
+const REPO_ROOT = path_1.default.resolve(__dirname, '../../..');
 const DEFAULT_PREDICTIONS_DIR = process.env.PREDICTIONS_DIR ||
-    path_1.default.resolve('/home/adam/Documents/JA_WC-board/predictions');
+    path_1.default.join(REPO_ROOT, 'predictions');
 async function loadPredictions(predictionsDir = DEFAULT_PREDICTIONS_DIR) {
     let files = [];
     try {
