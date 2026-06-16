@@ -75,6 +75,8 @@ interface PairResult {
   date: string;
 }
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
 function normalizeName(name: string): string {
   return name
     .normalize('NFD')
@@ -91,6 +93,27 @@ function buildPairKey(teamA: string, teamB: string): string {
 function buildScheduleNameAliases(team: string): string[] {
   const aliases = TEAM_NAME_MAP[team] ?? [team];
   return aliases.map((alias) => normalizeName(alias));
+}
+
+function parseDateOnlyToUtc(date: string): number | null {
+  const [yearStr, monthStr, dayStr] = date.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    return null;
+  }
+
+  return Date.UTC(year, month - 1, day);
+}
+
+function getScheduleMatchDateUtc(match: GroupMatch): number | null {
+  return parseDateOnlyToUtc(match.kickoffLocal.slice(0, 10));
+}
+
+function getDayDistance(first: number, second: number): number {
+  return Math.abs(first - second) / DAY_IN_MS;
 }
 
 async function parseResultsCsv(csvText: string): Promise<InternationalResultRow[]> {
@@ -115,7 +138,7 @@ async function parseResultsCsv(csvText: string): Promise<InternationalResultRow[
   });
 }
 
-export async function fetchResultsFromWikipedia(
+export async function fetchResultsFromSource(
   schedule: GroupMatch[],
 ): Promise<MatchResult[]> {
   const response = await axios.get<string>(RESULTS_SOURCE_URL, {
@@ -125,10 +148,16 @@ export async function fetchResultsFromWikipedia(
   });
 
   const parsedRows = await parseResultsCsv(response.data);
+  const scheduleYears = new Set(
+    schedule.map((match) => match.kickoffLocal.slice(0, 4)),
+  );
 
-  const latestPairResults = new Map<string, PairResult>();
+  const pairResults = new Map<string, PairResult[]>();
   for (const row of parsedRows) {
-    if (row.tournament !== 'FIFA World Cup') {
+    if (
+      row.tournament !== 'FIFA World Cup' ||
+      !scheduleYears.has(row.date.slice(0, 4))
+    ) {
       continue;
     }
 
@@ -139,40 +168,48 @@ export async function fetchResultsFromWikipedia(
     }
 
     const key = buildPairKey(row.home_team, row.away_team);
-    const current = latestPairResults.get(key);
-    if (!current || row.date > current.date) {
-      latestPairResults.set(key, {
-        home: row.home_team,
-        away: row.away_team,
-        homeScore,
-        awayScore,
-        date: row.date,
-      });
-    }
+    const existingResults = pairResults.get(key) ?? [];
+    existingResults.push({
+      home: row.home_team,
+      away: row.away_team,
+      homeScore,
+      awayScore,
+      date: row.date,
+    });
+    pairResults.set(key, existingResults);
   }
 
   const results: MatchResult[] = [];
   for (const match of schedule) {
     const homeAliases = buildScheduleNameAliases(match.homeTeam);
     const awayAliases = buildScheduleNameAliases(match.awayTeam);
+    const scheduledDateUtc = getScheduleMatchDateUtc(match);
 
     let matched: PairResult | undefined;
     let homeAliasUsed = '';
     let awayAliasUsed = '';
+    let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const homeAlias of homeAliases) {
-      if (matched) {
-        break;
-      }
-
       for (const awayAlias of awayAliases) {
         const key = [homeAlias, awayAlias].sort().join('|');
-        const candidate = latestPairResults.get(key);
-        if (candidate) {
+        const candidates = pairResults.get(key) ?? [];
+
+        for (const candidate of candidates) {
+          const candidateDateUtc = parseDateOnlyToUtc(candidate.date);
+          if (scheduledDateUtc === null || candidateDateUtc === null) {
+            continue;
+          }
+
+          const dayDistance = getDayDistance(scheduledDateUtc, candidateDateUtc);
+          if (dayDistance > 1 || dayDistance >= bestDistance) {
+            continue;
+          }
+
           matched = candidate;
           homeAliasUsed = homeAlias;
           awayAliasUsed = awayAlias;
-          break;
+          bestDistance = dayDistance;
         }
       }
     }

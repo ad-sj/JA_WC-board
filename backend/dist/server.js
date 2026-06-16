@@ -10,7 +10,7 @@ const scheduleLoader_1 = require("./schedule/scheduleLoader");
 const predictionLoader_1 = require("./predictions/predictionLoader");
 const scoringEngine_1 = require("./scoring/scoringEngine");
 const resultLoader_1 = require("./results/resultLoader");
-const wikiResultFetcher_1 = require("./results/wikiResultFetcher");
+const resultFetcher_1 = require("./results/resultFetcher");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -68,8 +68,8 @@ app.get('/api/users/:username', async (req, res) => {
 app.post('/api/admin/refresh-results', async (_req, res) => {
     try {
         const schedule = await (0, scheduleLoader_1.loadSchedule)();
-        const results = await (0, wikiResultFetcher_1.fetchResultsFromWikipedia)(schedule);
-        await (0, wikiResultFetcher_1.writeResultsCsv)((0, resultLoader_1.getDefaultResultsPath)(), results);
+        const results = await (0, resultFetcher_1.fetchResultsFromSource)(schedule);
+        await (0, resultFetcher_1.writeResultsCsv)((0, resultLoader_1.getDefaultResultsPath)(), results);
         res.json({
             updated: true,
             resultCount: results.length,

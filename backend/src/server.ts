@@ -10,9 +10,9 @@ import {
   loadResults,
 } from './results/resultLoader';
 import {
-  fetchResultsFromWikipedia,
+  fetchResultsFromSource,
   writeResultsCsv,
-} from './results/wikiResultFetcher';
+} from './results/resultFetcher';
 
 dotenv.config();
 
@@ -80,7 +80,7 @@ app.get('/api/users/:username', async (req, res) => {
 app.post('/api/admin/refresh-results', async (_req, res) => {
   try {
     const schedule = await loadSchedule();
-    const results = await fetchResultsFromWikipedia(schedule);
+    const results = await fetchResultsFromSource(schedule);
 
     await writeResultsCsv(getDefaultResultsPath(), results);
 

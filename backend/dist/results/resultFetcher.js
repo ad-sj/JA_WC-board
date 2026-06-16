@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchResultsFromWikipedia = fetchResultsFromWikipedia;
+exports.fetchResultsFromSource = fetchResultsFromSource;
 exports.writeResultsCsv = writeResultsCsv;
 const fs_1 = __importDefault(require("fs"));
 const axios_1 = __importDefault(require("axios"));
@@ -59,6 +59,7 @@ const TEAM_NAME_MAP = {
     Uzbekistan: ['Uzbekistan'],
     Colombia: ['Colombia'],
 };
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 function normalizeName(name) {
     return name
         .normalize('NFD')
@@ -73,6 +74,22 @@ function buildPairKey(teamA, teamB) {
 function buildScheduleNameAliases(team) {
     const aliases = TEAM_NAME_MAP[team] ?? [team];
     return aliases.map((alias) => normalizeName(alias));
+}
+function parseDateOnlyToUtc(date) {
+    const [yearStr, monthStr, dayStr] = date.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
+    if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+        return null;
+    }
+    return Date.UTC(year, month - 1, day);
+}
+function getScheduleMatchDateUtc(match) {
+    return parseDateOnlyToUtc(match.kickoffLocal.slice(0, 10));
+}
+function getDayDistance(first, second) {
+    return Math.abs(first - second) / DAY_IN_MS;
 }
 async function parseResultsCsv(csvText) {
     return new Promise((resolve, reject) => {
@@ -92,16 +109,18 @@ async function parseResultsCsv(csvText) {
         parser.on('end', () => resolve(records));
     });
 }
-async function fetchResultsFromWikipedia(schedule) {
+async function fetchResultsFromSource(schedule) {
     const response = await axios_1.default.get(RESULTS_SOURCE_URL, {
         headers: {
             'User-Agent': 'JA-WC-board/1.0 (+local dashboard)',
         },
     });
     const parsedRows = await parseResultsCsv(response.data);
-    const latestPairResults = new Map();
+    const scheduleYears = new Set(schedule.map((match) => match.kickoffLocal.slice(0, 4)));
+    const pairResults = new Map();
     for (const row of parsedRows) {
-        if (row.tournament !== 'FIFA World Cup') {
+        if (row.tournament !== 'FIFA World Cup' ||
+            !scheduleYears.has(row.date.slice(0, 4))) {
             continue;
         }
         const homeScore = parseInt(row.home_score, 10);
@@ -110,36 +129,42 @@ async function fetchResultsFromWikipedia(schedule) {
             continue;
         }
         const key = buildPairKey(row.home_team, row.away_team);
-        const current = latestPairResults.get(key);
-        if (!current || row.date > current.date) {
-            latestPairResults.set(key, {
-                home: row.home_team,
-                away: row.away_team,
-                homeScore,
-                awayScore,
-                date: row.date,
-            });
-        }
+        const existingResults = pairResults.get(key) ?? [];
+        existingResults.push({
+            home: row.home_team,
+            away: row.away_team,
+            homeScore,
+            awayScore,
+            date: row.date,
+        });
+        pairResults.set(key, existingResults);
     }
     const results = [];
     for (const match of schedule) {
         const homeAliases = buildScheduleNameAliases(match.homeTeam);
         const awayAliases = buildScheduleNameAliases(match.awayTeam);
+        const scheduledDateUtc = getScheduleMatchDateUtc(match);
         let matched;
         let homeAliasUsed = '';
         let awayAliasUsed = '';
+        let bestDistance = Number.POSITIVE_INFINITY;
         for (const homeAlias of homeAliases) {
-            if (matched) {
-                break;
-            }
             for (const awayAlias of awayAliases) {
                 const key = [homeAlias, awayAlias].sort().join('|');
-                const candidate = latestPairResults.get(key);
-                if (candidate) {
+                const candidates = pairResults.get(key) ?? [];
+                for (const candidate of candidates) {
+                    const candidateDateUtc = parseDateOnlyToUtc(candidate.date);
+                    if (scheduledDateUtc === null || candidateDateUtc === null) {
+                        continue;
+                    }
+                    const dayDistance = getDayDistance(scheduledDateUtc, candidateDateUtc);
+                    if (dayDistance > 1 || dayDistance >= bestDistance) {
+                        continue;
+                    }
                     matched = candidate;
                     homeAliasUsed = homeAlias;
                     awayAliasUsed = awayAlias;
-                    break;
+                    bestDistance = dayDistance;
                 }
             }
         }
