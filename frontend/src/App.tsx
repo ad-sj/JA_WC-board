@@ -235,7 +235,6 @@ function App() {
             live
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
-            selectedUser={selectedUser}
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
@@ -257,7 +256,6 @@ function App() {
             togglePlacement="before"
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
-            selectedUser={selectedUser}
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
@@ -279,7 +277,6 @@ function App() {
             togglePlacement="after"
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
-            selectedUser={selectedUser}
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
@@ -345,7 +342,6 @@ function MatchSection({
   togglePlacement = 'before',
   participantLabel,
   userMatchById,
-  selectedUser,
   expandedMatchId,
   expandedPredictions,
   isLoadingMatchPredictions,
@@ -360,7 +356,6 @@ function MatchSection({
   togglePlacement?: 'before' | 'after';
   participantLabel: string;
   userMatchById: Map<number, UserMatchScore>;
-  selectedUser: string | null;
   expandedMatchId: number | null;
   expandedPredictions: MatchPredictionOverview[] | null;
   isLoadingMatchPredictions: boolean;
