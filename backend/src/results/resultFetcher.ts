@@ -1,7 +1,7 @@
 import fs from 'fs';
 import axios from 'axios';
 import { parse } from 'csv-parse';
-import type { MatchResult } from './resultLoader';
+import { getDefaultResultsPath, loadResults, type MatchResult } from './resultLoader';
 import type { GroupMatch } from '../schedule/scheduleLoader';
 
 const RESULTS_SOURCE_URL =
@@ -232,6 +232,42 @@ export async function fetchResultsFromSource(
   }
 
   return results.sort((a, b) => a.matchId - b.matchId);
+}
+
+export function mergeResults(
+  existingResults: MatchResult[],
+  fetchedResults: MatchResult[],
+): MatchResult[] {
+  const merged = new Map<number, MatchResult>();
+
+  for (const result of existingResults) {
+    merged.set(result.matchId, result);
+  }
+
+  for (const result of fetchedResults) {
+    const previous = merged.get(result.matchId);
+    merged.set(result.matchId, {
+      ...previous,
+      ...result,
+    });
+  }
+
+  return [...merged.values()].sort((a, b) => a.matchId - b.matchId);
+}
+
+export async function loadPreferredResults(
+  schedule: GroupMatch[],
+  resultsPath: string = getDefaultResultsPath(),
+): Promise<MatchResult[]> {
+  const existingResults = await loadResults(resultsPath);
+
+  try {
+    const fetchedResults = await fetchResultsFromSource(schedule);
+    return mergeResults(existingResults, fetchedResults);
+  } catch (err) {
+    console.warn('Failed to fetch fresher results from source, using local results.csv', err);
+    return existingResults;
+  }
 }
 
 export async function writeResultsCsv(

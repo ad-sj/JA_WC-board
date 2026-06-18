@@ -10,7 +10,7 @@ import {
   loadResults,
 } from './results/resultLoader';
 import {
-  fetchResultsFromSource,
+  loadPreferredResults,
   writeResultsCsv,
 } from './results/resultFetcher';
 
@@ -80,7 +80,7 @@ app.get('/api/users/:username', async (req, res) => {
 app.post('/api/admin/refresh-results', async (_req, res) => {
   try {
     const schedule = await loadSchedule();
-    const results = await fetchResultsFromSource(schedule);
+    const results = await loadPreferredResults(schedule);
 
     await writeResultsCsv(getDefaultResultsPath(), results);
 

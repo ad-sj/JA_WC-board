@@ -4,10 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchResultsFromSource = fetchResultsFromSource;
+exports.mergeResults = mergeResults;
+exports.loadPreferredResults = loadPreferredResults;
 exports.writeResultsCsv = writeResultsCsv;
 const fs_1 = __importDefault(require("fs"));
 const axios_1 = __importDefault(require("axios"));
 const csv_parse_1 = require("csv-parse");
+const resultLoader_1 = require("./resultLoader");
 const RESULTS_SOURCE_URL = 'https://raw.githubusercontent.com/martj42/international_results/master/results.csv';
 const TEAM_NAME_MAP = {
     Mexiko: ['Mexico'],
@@ -182,6 +185,31 @@ async function fetchResultsFromSource(schedule) {
         });
     }
     return results.sort((a, b) => a.matchId - b.matchId);
+}
+function mergeResults(existingResults, fetchedResults) {
+    const merged = new Map();
+    for (const result of existingResults) {
+        merged.set(result.matchId, result);
+    }
+    for (const result of fetchedResults) {
+        const previous = merged.get(result.matchId);
+        merged.set(result.matchId, {
+            ...previous,
+            ...result,
+        });
+    }
+    return [...merged.values()].sort((a, b) => a.matchId - b.matchId);
+}
+async function loadPreferredResults(schedule, resultsPath = (0, resultLoader_1.getDefaultResultsPath)()) {
+    const existingResults = await (0, resultLoader_1.loadResults)(resultsPath);
+    try {
+        const fetchedResults = await fetchResultsFromSource(schedule);
+        return mergeResults(existingResults, fetchedResults);
+    }
+    catch (err) {
+        console.warn('Failed to fetch fresher results from source, using local results.csv', err);
+        return existingResults;
+    }
 }
 async function writeResultsCsv(resultsFilePath, results) {
     const lines = ['Match,HomeTeam,AwayTeam,HomeGoals,AwayGoals'];

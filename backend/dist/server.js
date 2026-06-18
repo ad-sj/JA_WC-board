@@ -68,7 +68,7 @@ app.get('/api/users/:username', async (req, res) => {
 app.post('/api/admin/refresh-results', async (_req, res) => {
     try {
         const schedule = await (0, scheduleLoader_1.loadSchedule)();
-        const results = await (0, resultFetcher_1.fetchResultsFromSource)(schedule);
+        const results = await (0, resultFetcher_1.loadPreferredResults)(schedule);
         await (0, resultFetcher_1.writeResultsCsv)((0, resultLoader_1.getDefaultResultsPath)(), results);
         res.json({
             updated: true,

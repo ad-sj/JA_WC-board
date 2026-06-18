@@ -3,8 +3,7 @@ import path from 'path';
 import { loadSchedule } from '../schedule/scheduleLoader';
 import { loadPredictions } from '../predictions/predictionLoader';
 import { buildLeaderboard, buildUserSummary } from '../scoring/scoringEngine';
-import { applyResultsToMatches } from '../results/resultLoader';
-import { fetchResultsFromSource } from '../results/resultFetcher';
+import { applyResultsToMatches, loadResults } from '../results/resultLoader';
 
 interface StaticDashboardData {
   generatedAt: string;
@@ -20,7 +19,7 @@ const OUTPUT_PATH = path.resolve(
 
 async function generateDashboardData(): Promise<StaticDashboardData> {
   const schedule = await loadSchedule();
-  const results = await fetchResultsFromSource(schedule);
+  const results = await loadResults();
   const matches = applyResultsToMatches(schedule, results);
   const predictions = await loadPredictions();
   const leaderboard = buildLeaderboard(matches, predictions);
