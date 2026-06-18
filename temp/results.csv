@@ -1,17 +1,25 @@
-Match,HomeGoals,AwayGoals
-1,2,0
-2,2,1
-3,1,1
-4,4,1
-5,1,1
-6,1,1
-7,0,1
-8,2,0
-9,7,1
-10,2,2
-11,1,0
-12,5,1
-13,0,0
-14,1,1
-15,1,1
-16,2,2
+Match,HomeTeam,AwayTeam,HomeGoals,AwayGoals
+1,Mexiko,Sydafrika,2,0
+2,Sydkorea,Tjeckien,2,1
+3,Kanada,Bosnien och Hercegovina,1,1
+4,USA,Paraguay,4,1
+5,Qatar,Schweiz,1,1
+6,Brasilien,Marocko,1,1
+7,Haiti,Skottland,0,1
+8,Australien,Turkiet,2,0
+9,Tyskland,Curaçao,7,1
+10,Nederländerna,Japan,2,2
+11,Elfenbenskusten,Ecuador,1,0
+12,Sverige,Tunisien,5,1
+13,Spanien,Kap Verde,0,0
+14,Belgien,Egypten,1,1
+15,Saudiarabien,Uruguay,1,1
+16,Iran,Nya Zeeland,2,2
+17,Frankrike,Senegal,3,1
+18,Irak,Norge,1,4
+19,Argentina,Algeriet,3,0
+20,Österrike,Jordanien,3,1
+21,Portugal,DR Kongo,1,1
+22,England,Kroatien,4,2
+23,Ghana,Panama,1,0
+24,Uzbekistan,Colombia,1,3

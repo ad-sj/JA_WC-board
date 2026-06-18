@@ -224,6 +224,8 @@ export async function fetchResultsFromSource(
 
     results.push({
       matchId: match.matchId,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
       homeScore: matchIsSameDirection ? matched.homeScore : matched.awayScore,
       awayScore: matchIsSameDirection ? matched.awayScore : matched.homeScore,
     });
@@ -236,9 +238,25 @@ export async function writeResultsCsv(
   resultsFilePath: string,
   results: MatchResult[],
 ): Promise<void> {
-  const lines = ['Match,HomeGoals,AwayGoals'];
+  const lines = ['Match,HomeTeam,AwayTeam,HomeGoals,AwayGoals'];
   for (const result of results) {
-    lines.push(`${result.matchId},${result.homeScore},${result.awayScore}`);
+    lines.push(
+      [
+        result.matchId,
+        escapeCsvValue(result.homeTeam ?? ''),
+        escapeCsvValue(result.awayTeam ?? ''),
+        result.homeScore,
+        result.awayScore,
+      ].join(','),
+    );
   }
   await fs.promises.writeFile(resultsFilePath, `${lines.join('\n')}\n`, 'utf8');
+}
+
+function escapeCsvValue(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  return value;
 }

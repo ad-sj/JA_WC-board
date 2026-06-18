@@ -175,6 +175,8 @@ async function fetchResultsFromSource(schedule) {
         const matchIsSameDirection = matchedHome === homeAliasUsed || normalizeName(matched.away) === awayAliasUsed;
         results.push({
             matchId: match.matchId,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
             homeScore: matchIsSameDirection ? matched.homeScore : matched.awayScore,
             awayScore: matchIsSameDirection ? matched.awayScore : matched.homeScore,
         });
@@ -182,9 +184,21 @@ async function fetchResultsFromSource(schedule) {
     return results.sort((a, b) => a.matchId - b.matchId);
 }
 async function writeResultsCsv(resultsFilePath, results) {
-    const lines = ['Match,HomeGoals,AwayGoals'];
+    const lines = ['Match,HomeTeam,AwayTeam,HomeGoals,AwayGoals'];
     for (const result of results) {
-        lines.push(`${result.matchId},${result.homeScore},${result.awayScore}`);
+        lines.push([
+            result.matchId,
+            escapeCsvValue(result.homeTeam ?? ''),
+            escapeCsvValue(result.awayTeam ?? ''),
+            result.homeScore,
+            result.awayScore,
+        ].join(','));
     }
     await fs_1.default.promises.writeFile(resultsFilePath, `${lines.join('\n')}\n`, 'utf8');
+}
+function escapeCsvValue(value) {
+    if (/[",\n]/.test(value)) {
+        return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
 }

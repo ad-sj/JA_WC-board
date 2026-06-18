@@ -31,12 +31,20 @@ async function loadResults(resultsPath = DEFAULT_RESULTS_PATH) {
                     const matchId = parseInt(record['Match'], 10);
                     const homeScore = parseInt(record['HomeGoals'], 10);
                     const awayScore = parseInt(record['AwayGoals'], 10);
+                    const homeTeam = normalizeOptionalTeamName(record['HomeTeam']);
+                    const awayTeam = normalizeOptionalTeamName(record['AwayTeam']);
                     if (Number.isNaN(matchId) ||
                         Number.isNaN(homeScore) ||
                         Number.isNaN(awayScore)) {
                         continue;
                     }
-                    records.push({ matchId, homeScore, awayScore });
+                    records.push({
+                        matchId,
+                        homeTeam,
+                        awayTeam,
+                        homeScore,
+                        awayScore,
+                    });
                 }
             });
             parser.on('error', (err) => reject(err));
@@ -56,19 +64,74 @@ function applyResultsToMatches(matches, results) {
         return matches;
     }
     const resultById = new Map();
+    const resultByTeams = new Map();
     for (const r of results) {
         resultById.set(r.matchId, r);
+        if (r.homeTeam && r.awayTeam) {
+            resultByTeams.set(buildTeamPairKey(r.homeTeam, r.awayTeam), r);
+        }
     }
     return matches.map((match) => {
-        const r = resultById.get(match.matchId);
-        if (!r) {
+        const byId = resultById.get(match.matchId);
+        const resolved = resolveResultForMatch(match, byId, resultByTeams);
+        if (!resolved) {
             return match;
         }
         return {
             ...match,
             status: 'finished',
-            homeScore: r.homeScore,
-            awayScore: r.awayScore,
+            homeScore: resolved.homeScore,
+            awayScore: resolved.awayScore,
         };
     });
+}
+function normalizeOptionalTeamName(value) {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+}
+function normalizeTeamName(team) {
+    return team
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+function buildTeamPairKey(homeTeam, awayTeam) {
+    return [normalizeTeamName(homeTeam), normalizeTeamName(awayTeam)].sort().join('|');
+}
+function resolveResultForMatch(match, resultById, resultByTeams) {
+    if (resultById) {
+        const orientedById = orientResultToMatch(match, resultById);
+        if (orientedById) {
+            return orientedById;
+        }
+    }
+    const byTeams = resultByTeams.get(buildTeamPairKey(match.homeTeam, match.awayTeam));
+    if (!byTeams) {
+        return null;
+    }
+    return orientResultToMatch(match, byTeams);
+}
+function orientResultToMatch(match, result) {
+    if (!result.homeTeam || !result.awayTeam) {
+        return result;
+    }
+    const matchHome = normalizeTeamName(match.homeTeam);
+    const matchAway = normalizeTeamName(match.awayTeam);
+    const resultHome = normalizeTeamName(result.homeTeam);
+    const resultAway = normalizeTeamName(result.awayTeam);
+    if (resultHome === matchHome && resultAway === matchAway) {
+        return result;
+    }
+    if (resultHome === matchAway && resultAway === matchHome) {
+        return {
+            ...result,
+            homeScore: result.awayScore,
+            awayScore: result.homeScore,
+        };
+    }
+    return null;
 }
