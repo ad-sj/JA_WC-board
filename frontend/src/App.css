@@ -370,6 +370,7 @@
   overflow: hidden;
   background: #ffffff;
   border: 1px solid var(--border);
+  cursor: pointer;
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 
@@ -521,6 +522,38 @@
   padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--muted);
+}
+
+.match-extra {
+  border-top: 1px solid var(--border);
+  background: #f3f4f6;
+}
+
+.match-extra-list {
+  padding: 8px 10px 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.match-extra-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+
+.match-extra-name {
+  font-weight: 600;
+}
+
+.match-extra-prediction {
+  font-variant-numeric: tabular-nums;
+}
+
+.match-extra-points {
+  justify-self: end;
+  font-weight: 600;
 }
 
 .match-pred {

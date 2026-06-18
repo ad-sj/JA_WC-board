@@ -5,10 +5,12 @@ import {
   fetchLeaderboard,
   fetchMatches,
   fetchUserSummary,
+  fetchMatchPredictions,
   type LeaderboardEntry,
   type MatchItem,
   type UserMatchScore,
   type UserSummary,
+  type MatchPredictionOverview,
 } from './api';
 
 function App() {
@@ -21,6 +23,11 @@ function App() {
   const [userSummary, setUserSummary] = useState<UserSummary | null>(null);
   const [showAllResults, setShowAllResults] = useState(false);
   const [showAllScheduled, setShowAllScheduled] = useState(false);
+  const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+  const [expandedMatchPredictions, setExpandedMatchPredictions] = useState<
+    MatchPredictionOverview[] | null
+  >(null);
+  const [isLoadingMatchPredictions, setIsLoadingMatchPredictions] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +134,25 @@ function App() {
       .map(([rank]) => Number(rank)),
   );
 
+  async function handleToggleMatch(matchId: number) {
+    if (expandedMatchId === matchId) {
+      setExpandedMatchId(null);
+      setExpandedMatchPredictions(null);
+      return;
+    }
+
+    setExpandedMatchId(matchId);
+    setIsLoadingMatchPredictions(true);
+    try {
+      const predictions = await fetchMatchPredictions(matchId);
+      setExpandedMatchPredictions(predictions);
+    } catch {
+      setExpandedMatchPredictions(null);
+    } finally {
+      setIsLoadingMatchPredictions(false);
+    }
+  }
+
   return (
     <main className="page-shell">
       <header className="masthead">
@@ -209,6 +235,11 @@ function App() {
             live
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
+            selectedUser={selectedUser}
+            expandedMatchId={expandedMatchId}
+            expandedPredictions={expandedMatchPredictions}
+            isLoadingMatchPredictions={isLoadingMatchPredictions}
+            onToggleMatch={handleToggleMatch}
           />
 
           <MatchSection
@@ -225,6 +256,11 @@ function App() {
             togglePlacement="before"
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
+            selectedUser={selectedUser}
+            expandedMatchId={expandedMatchId}
+            expandedPredictions={expandedMatchPredictions}
+            isLoadingMatchPredictions={isLoadingMatchPredictions}
+            onToggleMatch={handleToggleMatch}
           />
 
           <MatchSection
@@ -241,6 +277,11 @@ function App() {
             togglePlacement="after"
             participantLabel={selectedParticipantLabel}
             userMatchById={userMatchById}
+            selectedUser={selectedUser}
+            expandedMatchId={expandedMatchId}
+            expandedPredictions={expandedMatchPredictions}
+            isLoadingMatchPredictions={isLoadingMatchPredictions}
+            onToggleMatch={handleToggleMatch}
           />
         </article>
 
@@ -301,6 +342,11 @@ function MatchSection({
   togglePlacement = 'before',
   participantLabel,
   userMatchById,
+  selectedUser,
+  expandedMatchId,
+  expandedPredictions,
+  isLoadingMatchPredictions,
+  onToggleMatch,
 }: {
   title: string;
   items: MatchItem[];
@@ -310,6 +356,11 @@ function MatchSection({
   togglePlacement?: 'before' | 'after';
   participantLabel: string;
   userMatchById: Map<number, UserMatchScore>;
+  selectedUser: string | null;
+  expandedMatchId: number | null;
+  expandedPredictions: MatchPredictionOverview[] | null;
+  isLoadingMatchPredictions: boolean;
+  onToggleMatch: (matchId: number) => void;
 }) {
   const toggleRow = toggleText && onToggle ? (
     <button className="match-toggle-row" type="button" onClick={onToggle}>
@@ -364,6 +415,7 @@ function MatchSection({
               : winner === 'away'
                 ? 'match-team is-winner'
                 : 'match-team';
+            const isExpanded = expandedMatchId === match.matchId;
 
             return (
               <article
@@ -375,6 +427,16 @@ function MatchSection({
                       : 'match-card is-scheduled'
                 }
                 key={match.matchId}
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                onClick={() => onToggleMatch(match.matchId)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onToggleMatch(match.matchId);
+                  }
+                }}
               >
                 <header className="match-card-top">
                   {isFinished ? null : (
@@ -407,6 +469,30 @@ function MatchSection({
                   </div>
                   <span className={`match-outcome ${outcomeTier}`}>{outcomeLabel}</span>
                 </footer>
+
+                {isExpanded ? (
+                  <div className="match-extra">
+                    {isLoadingMatchPredictions || !expandedPredictions ? (
+                      <div className="match-extra-row">Loading picks…</div>
+                    ) : (
+                      <div className="match-extra-list">
+                        {expandedPredictions
+                          .filter((p) => p.username !== selectedUser)
+                          .map((p) => (
+                            <div className="match-extra-row" key={p.username}>
+                              <span className="match-extra-name">{p.username}</span>
+                              <span className="match-extra-prediction">
+                                {p.prediction
+                                  ? `${p.prediction.homeGoals}–${p.prediction.awayGoals}`
+                                  : '–'}
+                              </span>
+                              <span className="match-extra-points">{p.points}p</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </article>
             );
           })}

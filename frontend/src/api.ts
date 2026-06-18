@@ -33,6 +33,17 @@ export interface UserSummary {
   matches: UserMatchScore[];
 }
 
+export interface MatchPredictionOverview {
+  username: string;
+  prediction:
+    | {
+        homeGoals: number;
+        awayGoals: number;
+      }
+    | null;
+  points: number;
+}
+
 interface DashboardData {
   generatedAt: string;
   matches: MatchItem[];
@@ -81,4 +92,26 @@ export async function fetchUserSummary(username: string): Promise<UserSummary> {
 export async function fetchGeneratedAt(): Promise<string> {
   const dashboardData = await loadDashboardData();
   return dashboardData.generatedAt;
+}
+
+export async function fetchMatchPredictions(
+  matchId: number,
+): Promise<MatchPredictionOverview[]> {
+  const dashboardData = await loadDashboardData();
+
+  return dashboardData.leaderboard.map((entry) => {
+    const summary = dashboardData.userSummaries[entry.username];
+    const matchScore = summary.matches.find((item) => item.match.matchId === matchId);
+
+    return {
+      username: entry.username,
+      prediction: matchScore?.prediction
+        ? {
+            homeGoals: matchScore.prediction.homeGoals,
+            awayGoals: matchScore.prediction.awayGoals,
+          }
+        : null,
+      points: matchScore?.points ?? 0,
+    };
+  });
 }
