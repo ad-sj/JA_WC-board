@@ -239,6 +239,7 @@ function App() {
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
+            tiedRanks={tiedRanks}
             onToggleMatch={handleToggleMatch}
           />
 
@@ -260,6 +261,7 @@ function App() {
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
+            tiedRanks={tiedRanks}
             onToggleMatch={handleToggleMatch}
           />
 
@@ -281,6 +283,7 @@ function App() {
             expandedMatchId={expandedMatchId}
             expandedPredictions={expandedMatchPredictions}
             isLoadingMatchPredictions={isLoadingMatchPredictions}
+            tiedRanks={tiedRanks}
             onToggleMatch={handleToggleMatch}
           />
         </article>
@@ -347,6 +350,7 @@ function MatchSection({
   expandedPredictions,
   isLoadingMatchPredictions,
   onToggleMatch,
+  tiedRanks,
 }: {
   title: string;
   items: MatchItem[];
@@ -361,6 +365,7 @@ function MatchSection({
   expandedPredictions: MatchPredictionOverview[] | null;
   isLoadingMatchPredictions: boolean;
   onToggleMatch: (matchId: number) => void;
+  tiedRanks: Set<number>;
 }) {
   const toggleRow = toggleText && onToggle ? (
     <button className="match-toggle-row" type="button" onClick={onToggle}>
@@ -477,16 +482,42 @@ function MatchSection({
                     ) : (
                       <div className="match-extra-list">
                         {expandedPredictions
-                          .filter((p) => p.username !== selectedUser)
+                          .slice()
+                          .sort((a, b) => {
+                            if (a.rankAfter === b.rankAfter) {
+                              return a.username.localeCompare(b.username);
+                            }
+                            return a.rankAfter - b.rankAfter;
+                          })
                           .map((p) => (
                             <div className="match-extra-row" key={p.username}>
-                              <span className="match-extra-name">{p.username}</span>
-                              <span className="match-extra-prediction">
-                                {p.prediction
-                                  ? `${p.prediction.homeGoals}–${p.prediction.awayGoals}`
-                                  : '–'}
+                              <span
+                                className={
+                                  p.movement === 'up'
+                                    ? 'match-extra-movement is-up'
+                                    : p.movement === 'down'
+                                      ? 'match-extra-movement is-down'
+                                      : 'match-extra-movement is-same'
+                                }
+                              >
+                                {p.movement === 'up'
+                                  ? '↑'
+                                  : p.movement === 'down'
+                                    ? '↓'
+                                    : '–'}
                               </span>
-                              <span className="match-extra-points">{p.points}p</span>
+                                <span className="match-extra-rank">
+                                  {p.rankAfter === 0
+                                    ? '–'
+                                    : `${tiedRanks.has(p.rankAfter) ? `T${p.rankAfter}` : p.rankAfter}`}
+                                </span>
+                                <span className="match-extra-name">{p.username}</span>
+                                <span className="match-extra-prediction">
+                                  {p.prediction
+                                    ? `${p.prediction.homeGoals}–${p.prediction.awayGoals}`
+                                    : '–'}
+                                </span>
+                                <span className="match-extra-points">{p.points}p</span>
                             </div>
                           ))}
                       </div>

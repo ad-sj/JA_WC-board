@@ -42,6 +42,9 @@ export interface MatchPredictionOverview {
       }
     | null;
   points: number;
+  rankBefore: number;
+  rankAfter: number;
+  movement: 'up' | 'down' | 'same';
 }
 
 interface DashboardData {
@@ -98,10 +101,63 @@ export async function fetchMatchPredictions(
   matchId: number,
 ): Promise<MatchPredictionOverview[]> {
   const dashboardData = await loadDashboardData();
+  const userSummariesEntries = Object.entries(dashboardData.userSummaries);
+
+  function computeRanks(beforeOrAfter: 'before' | 'after'): Map<string, number> {
+    const scores: { username: string; totalPoints: number }[] = [];
+
+    for (const [username, summary] of userSummariesEntries) {
+      let total = 0;
+      for (const matchScore of summary.matches) {
+        const match = matchScore.match;
+        if (
+          match.status === 'finished' &&
+          match.homeScore !== null &&
+          match.awayScore !== null &&
+          (beforeOrAfter === 'after'
+            ? match.matchId <= matchId
+            : match.matchId < matchId)
+        ) {
+          total += matchScore.points;
+        }
+      }
+      scores.push({ username, totalPoints: total });
+    }
+
+    scores.sort((a, b) => b.totalPoints - a.totalPoints);
+
+    const ranks = new Map<string, number>();
+    let currentRank = 0;
+    let lastPoints: number | null = null;
+
+    scores.forEach((s, index) => {
+      if (lastPoints === null || s.totalPoints !== lastPoints) {
+        currentRank = index + 1;
+        lastPoints = s.totalPoints;
+      }
+      ranks.set(s.username, currentRank);
+    });
+
+    return ranks;
+  }
+
+  const ranksBefore = computeRanks('before');
+  const ranksAfter = computeRanks('after');
 
   return dashboardData.leaderboard.map((entry) => {
     const summary = dashboardData.userSummaries[entry.username];
     const matchScore = summary.matches.find((item) => item.match.matchId === matchId);
+    const rankAfter = ranksAfter.get(entry.username) ?? entry.rank;
+    const rankBefore = ranksBefore.get(entry.username) ?? rankAfter;
+
+    let movement: 'up' | 'down' | 'same';
+    if (rankAfter < rankBefore) {
+      movement = 'up';
+    } else if (rankAfter > rankBefore) {
+      movement = 'down';
+    } else {
+      movement = 'same';
+    }
 
     return {
       username: entry.username,
@@ -112,6 +168,9 @@ export async function fetchMatchPredictions(
           }
         : null,
       points: matchScore?.points ?? 0,
+      rankBefore,
+      rankAfter,
+      movement,
     };
   });
 }

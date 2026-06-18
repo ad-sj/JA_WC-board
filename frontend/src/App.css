@@ -537,8 +537,8 @@
 
 .match-extra-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  gap: 6px;
   align-items: baseline;
   font-size: 0.8rem;
 }
@@ -554,6 +554,28 @@
 .match-extra-points {
   justify-self: end;
   font-weight: 600;
+}
+
+.match-extra-rank {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-extra-movement {
+  justify-self: end;
+  font-size: 0.78rem;
+}
+
+.match-extra-movement.is-up {
+  color: #16a34a;
+}
+
+.match-extra-movement.is-down {
+  color: #dc2626;
+}
+
+.match-extra-movement.is-same {
+  color: #6b7280;
 }
 
 .match-pred {
