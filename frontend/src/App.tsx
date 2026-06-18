@@ -133,34 +133,25 @@ function App() {
         <div className="masthead-copy">
           <p className="eyebrow">FIFA World Cup 2026</p>
           <h1>Prediction Dashboard</h1>
-          <p className="hero-copy">
-            Live fixtures, finished matches, and each participant&apos;s prediction performance in a
-            flat, mobile-first dashboard.
-          </p>
         </div>
-
-        <div className="status-card" aria-label="Refresh status">
-          <span className="status-label">Latest refresh</span>
-          <strong>{updatedAt || 'Pending'}</strong>
-          <span className="status-note">Static data updates whenever the dashboard payload is rebuilt</span>
-        </div>
+        <span className="masthead-refresh">Updated {updatedAt || '–'}</span>
       </header>
 
       <section className="hero-banner">
         <div className="hero-copy-block">
-          <p className="hero-kicker">Selected participant</p>
           <div className="focus-card">
+            <span className="hero-kicker">Selected participant</span>
             <strong>{selectedParticipantLabel}</strong>
             <span>
               {selectedLeaderboardEntry
                 ? `${selectedLeaderboardEntry.totalPoints} points overall`
-                : 'Choose a participant to compare predictions against every match'}
+                : 'Choose a participant below'}
             </span>
           </div>
 
           <div className="hero-metrics" aria-label="Dashboard summary">
             <div className="metric-chip metric-chip-primary">
-              <span className="metric-label">Participants</span>
+              <span className="metric-label">Players</span>
               <strong>{participantCount}</strong>
             </div>
             <div className="metric-chip metric-chip-secondary">
@@ -176,14 +167,6 @@ function App() {
               <strong>{scheduledMatches.length}</strong>
             </div>
           </div>
-        </div>
-
-        <div className="hero-art" aria-hidden="true">
-          <div className="art-circle art-circle-large" />
-          <div className="art-circle art-circle-small" />
-          <div className="art-square art-square-large" />
-          <div className="art-square art-square-small" />
-          <div className="art-band" />
         </div>
       </section>
 
@@ -231,7 +214,6 @@ function App() {
           <MatchSection
             title="Results"
             items={showAllResults ? finishedMatches : finishedMatches.slice(-4)}
-            showResults
             toggleText={
               finishedMatches.length > 4
                 ? showAllResults
@@ -314,7 +296,6 @@ function MatchSection({
   title,
   items,
   live = false,
-  showResults = false,
   toggleText = null,
   onToggle,
   togglePlacement = 'before',
@@ -324,7 +305,6 @@ function MatchSection({
   title: string;
   items: MatchItem[];
   live?: boolean;
-  showResults?: boolean;
   toggleText?: string | null;
   onToggle?: () => void;
   togglePlacement?: 'before' | 'after';
@@ -353,21 +333,40 @@ function MatchSection({
             const winner = getWinner(match);
             const userMatch = userMatchById.get(match.matchId);
             const hasOfficialScore = match.homeScore !== null && match.awayScore !== null;
-            const pointsLabel =
-              match.status === 'finished' && hasOfficialScore ? `${userMatch?.points ?? 0} pts` : 'Pending';
-            const officialValue = hasOfficialScore ? `${match.homeScore}-${match.awayScore}` : 'VS';
-            const officialLabel = live ? 'Current score' : showResults ? 'Official result' : 'Kickoff';
+            const isFinished = match.status === 'finished';
+            const isDraw = hasOfficialScore && winner === 'draw';
+            const statusLabel = live ? 'LIVE' : match.timeRaw;
             const predictionValue = userMatch?.prediction
-              ? `${userMatch.prediction.homeGoals}-${userMatch.prediction.awayGoals}`
-              : 'No pick';
-            const predictionNote = hasOfficialScore
-              ? pointsLabel
+              ? `${userMatch.prediction.homeGoals}–${userMatch.prediction.awayGoals}`
+              : '–';
+            const points = userMatch?.points ?? 0;
+            const outcomeLabel = hasOfficialScore
+              ? `${points} pt${points === 1 ? '' : 's'}`
               : userMatch?.prediction
-                ? 'Prediction saved'
-                : 'No prediction submitted';
+                ? 'Saved'
+                : 'No pick';
+            const outcomeTier = hasOfficialScore
+              ? points >= 5
+                ? 'is-exact'
+                : points >= 3
+                  ? 'is-outcome'
+                  : points >= 1
+                    ? 'is-played'
+                    : 'is-miss'
+              : 'is-pending';
+            const homeTeamClass = isDraw
+              ? 'match-team is-draw'
+              : winner === 'home'
+                ? 'match-team is-winner'
+                : 'match-team';
+            const awayTeamClass = isDraw
+              ? 'match-team is-draw'
+              : winner === 'away'
+                ? 'match-team is-winner'
+                : 'match-team';
 
             return (
-              <div
+              <article
                 className={
                   match.status === 'live'
                     ? 'match-card is-live'
@@ -377,42 +376,38 @@ function MatchSection({
                 }
                 key={match.matchId}
               >
-                <div className="match-meta">
-                  <span className="match-number">Match {match.matchId}</span>
-                  <span className="match-kickoff">{match.dateRaw} {match.timeRaw}</span>
-                  {live ? <span className="live-pill">LIVE</span> : null}
-                </div>
+                <header className="match-card-top">
+                  {isFinished ? null : (
+                    <span className={live ? 'match-status is-live-status' : 'match-status'}>
+                      {statusLabel}
+                    </span>
+                  )}
+                  <span className="match-card-info">Match {match.matchId} · {match.dateRaw}</span>
+                </header>
 
-                <div className="teams">
-                  <div className={winner === 'home' ? 'team winner team-block' : 'team team-block'}>
-                    <span className="team-side">Home</span>
-                    <strong>{match.homeTeam}</strong>
-                  </div>
-                  <div className="score-block" aria-label={officialLabel}>
-                    {officialValue}
-                  </div>
-                  <div className={winner === 'away' ? 'team winner team-block' : 'team team-block'}>
-                    <span className="team-side">Away</span>
-                    <strong>{match.awayTeam}</strong>
-                  </div>
-                </div>
-
-                <div className="prediction-grid">
-                  <div className="prediction-panel">
-                    <span className="prediction-label">{officialLabel}</span>
-                    <strong className="prediction-score prediction-score-official">{officialValue}</strong>
-                    <span className="prediction-meta">
-                      {hasOfficialScore ? 'Recorded result' : `${match.dateRaw} ${match.timeRaw}`}
+                <div className="match-teams">
+                  <div className={homeTeamClass}>
+                    <span className="match-team-name">{match.homeTeam}</span>
+                    <span className="match-team-score">
+                      {hasOfficialScore ? match.homeScore : '–'}
                     </span>
                   </div>
-
-                  <div className="prediction-panel prediction-panel-user">
-                    <span className="prediction-label">{participantLabel}</span>
-                    <strong className="prediction-score prediction-score-user">{predictionValue}</strong>
-                    <span className="prediction-meta">{predictionNote}</span>
+                  <div className={awayTeamClass}>
+                    <span className="match-team-name">{match.awayTeam}</span>
+                    <span className="match-team-score">
+                      {hasOfficialScore ? match.awayScore : '–'}
+                    </span>
                   </div>
                 </div>
-              </div>
+
+                <footer className="match-prediction-row">
+                  <div className="match-pred">
+                    <span className="match-pred-label">{participantLabel}</span>
+                    <span className="match-pred-value">{predictionValue}</span>
+                  </div>
+                  <span className={`match-outcome ${outcomeTier}`}>{outcomeLabel}</span>
+                </footer>
+              </article>
             );
           })}
           {togglePlacement === 'after' ? toggleRow : null}
