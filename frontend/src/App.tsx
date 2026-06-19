@@ -465,7 +465,7 @@ function MatchSection({
                 <footer className="match-prediction-row">
                   <div className="match-pred">
                     <span className="match-pred-label">{participantLabel}</span>
-                    <span className="match-pred-value">{predictionValue}</span>
+                    <span className={`match-pred-value ${outcomeTier}`}>{predictionValue}</span>
                   </div>
                   <span className={`match-outcome ${outcomeTier}`}>{outcomeLabel}</span>
                 </footer>

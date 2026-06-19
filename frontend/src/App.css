@@ -601,6 +601,34 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.match-pred-value.is-exact {
+  background: var(--secondary);
+  color: #ffffff;
+}
+
+.match-pred-value.is-outcome {
+  background: var(--secondary-soft);
+  color: #065f46;
+}
+
+.match-pred-value.is-played {
+  background: var(--accent-soft);
+  color: #92400e;
+}
+
+.match-pred-value.is-miss {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.match-pred-value.is-pending {
+  background: var(--border);
+  color: rgba(17, 24, 39, 0.6);
 }
 
 .match-outcome {
