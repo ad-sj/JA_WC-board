@@ -57,7 +57,6 @@
 .panel,
 .match-card,
 .leaderboard-selected-summary,
-.selected-participant-banner,
 .rule-card,
 .error-panel,
 .loading-panel,
@@ -271,15 +270,15 @@
 }
 
 .selected-participant-banner {
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  background: var(--muted);
+  margin-bottom: 6px;
+  padding: 0;
+  background: transparent;
 }
 
 .selected-participant-banner strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 1.05rem;
+  display: inline;
+  margin-left: 4px;
+  font-size: 0.95rem;
 }
 
 .leaderboard-table,
