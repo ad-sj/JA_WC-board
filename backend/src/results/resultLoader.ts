@@ -79,11 +79,8 @@ export async function loadResults(
 export function applyResultsToMatches(
   matches: GroupMatch[],
   results: MatchResult[],
+  now: number = Date.now(),
 ): GroupMatch[] {
-  if (results.length === 0) {
-    return matches;
-  }
-
   const resultById = new Map<number, MatchResult>();
   const resultByTeams = new Map<string, MatchResult>();
   for (const r of results) {
@@ -96,17 +93,47 @@ export function applyResultsToMatches(
   return matches.map((match) => {
     const byId = resultById.get(match.matchId);
     const resolved = resolveResultForMatch(match, byId, resultByTeams);
-    if (!resolved) {
-      return match;
+    if (resolved) {
+      return {
+        ...match,
+        status: 'finished',
+        homeScore: resolved.homeScore,
+        awayScore: resolved.awayScore,
+      };
     }
 
+    // No result yet: derive whether the match is currently in progress from its
+    // kickoff time so the board can show live matches before final scores publish.
     return {
       ...match,
-      status: 'finished',
-      homeScore: resolved.homeScore,
-      awayScore: resolved.awayScore,
+      status: deriveStatusFromKickoff(match.kickoffLocal, now),
     };
   });
+}
+
+// Window after kickoff during which a match without a published result is treated
+// as "live" (90 min play + half-time + stoppage + a safety buffer).
+const LIVE_WINDOW_MS = 150 * 60 * 1000;
+
+function deriveStatusFromKickoff(
+  kickoffLocal: string,
+  now: number,
+): GroupMatch['status'] {
+  // kickoffLocal is stored as Europe/Stockholm local time (CEST, UTC+2 in June).
+  const kickoffMs = Date.parse(`${kickoffLocal}+02:00`);
+  if (Number.isNaN(kickoffMs)) {
+    return 'scheduled';
+  }
+
+  if (now < kickoffMs) {
+    return 'scheduled';
+  }
+
+  if (now < kickoffMs + LIVE_WINDOW_MS) {
+    return 'live';
+  }
+
+  return 'scheduled';
 }
 
 function normalizeOptionalTeamName(value: unknown): string | undefined {

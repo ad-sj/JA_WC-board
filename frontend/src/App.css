@@ -105,6 +105,13 @@
   color: rgba(17, 24, 39, 0.66);
 }
 
+.panel-note {
+  margin: 0 0 16px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba(17, 24, 39, 0.66);
+}
+
 .masthead h1 {
   margin: 4px 0 0;
   font-size: clamp(1.8rem, 8vw, 3rem);

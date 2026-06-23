@@ -294,6 +294,11 @@ function App() {
             <span>{leaderboard.length} participants</span>
           </div>
 
+          <p className="panel-note">
+            Points are awarded once a match is finished — live matches don’t score
+            until the final result is in.
+          </p>
+
           <div className="leaderboard-selected-summary">
             <span>Selected</span>
             <strong>

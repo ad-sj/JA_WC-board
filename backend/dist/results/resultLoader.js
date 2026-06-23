@@ -59,10 +59,7 @@ async function loadResults(resultsPath = DEFAULT_RESULTS_PATH) {
         throw err;
     }
 }
-function applyResultsToMatches(matches, results) {
-    if (results.length === 0) {
-        return matches;
-    }
+function applyResultsToMatches(matches, results, now = Date.now()) {
     const resultById = new Map();
     const resultByTeams = new Map();
     for (const r of results) {
@@ -74,16 +71,38 @@ function applyResultsToMatches(matches, results) {
     return matches.map((match) => {
         const byId = resultById.get(match.matchId);
         const resolved = resolveResultForMatch(match, byId, resultByTeams);
-        if (!resolved) {
-            return match;
+        if (resolved) {
+            return {
+                ...match,
+                status: 'finished',
+                homeScore: resolved.homeScore,
+                awayScore: resolved.awayScore,
+            };
         }
+        // No result yet: derive whether the match is currently in progress from its
+        // kickoff time so the board can show live matches before final scores publish.
         return {
             ...match,
-            status: 'finished',
-            homeScore: resolved.homeScore,
-            awayScore: resolved.awayScore,
+            status: deriveStatusFromKickoff(match.kickoffLocal, now),
         };
     });
+}
+// Window after kickoff during which a match without a published result is treated
+// as "live" (90 min play + half-time + stoppage + a safety buffer).
+const LIVE_WINDOW_MS = 150 * 60 * 1000;
+function deriveStatusFromKickoff(kickoffLocal, now) {
+    // kickoffLocal is stored as Europe/Stockholm local time (CEST, UTC+2 in June).
+    const kickoffMs = Date.parse(`${kickoffLocal}+02:00`);
+    if (Number.isNaN(kickoffMs)) {
+        return 'scheduled';
+    }
+    if (now < kickoffMs) {
+        return 'scheduled';
+    }
+    if (now < kickoffMs + LIVE_WINDOW_MS) {
+        return 'live';
+    }
+    return 'scheduled';
 }
 function normalizeOptionalTeamName(value) {
     if (typeof value !== 'string') {

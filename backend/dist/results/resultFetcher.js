@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchResultsFromSource = fetchResultsFromSource;
+exports.fetchResultsFromOpenFootball = fetchResultsFromOpenFootball;
 exports.mergeResults = mergeResults;
 exports.loadPreferredResults = loadPreferredResults;
 exports.writeResultsCsv = writeResultsCsv;
@@ -12,13 +13,18 @@ const axios_1 = __importDefault(require("axios"));
 const csv_parse_1 = require("csv-parse");
 const resultLoader_1 = require("./resultLoader");
 const RESULTS_SOURCE_URL = 'https://raw.githubusercontent.com/martj42/international_results/master/results.csv';
+// openfootball/worldcup.json is a free, public-domain (CC0), no-key dataset covering
+// the complete World Cup 2026 (all group + knockout fixtures with scores). It is
+// auto-generated and refreshed frequently, so it is far fresher than the daily
+// community CSV while still providing complete coverage (unlike rate-capped APIs).
+const OPENFOOTBALL_WORLD_CUP_URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
 const TEAM_NAME_MAP = {
     Mexiko: ['Mexico'],
     Sydafrika: ['South Africa'],
     Sydkorea: ['South Korea'],
     Tjeckien: ['Czech Republic'],
     Kanada: ['Canada'],
-    'Bosnien och Hercegovina': ['Bosnia and Herzegovina', 'Bosnia-Herzegovina'],
+    'Bosnien och Hercegovina': ['Bosnia and Herzegovina', 'Bosnia-Herzegovina', 'Bosnia & Herzegovina'],
     USA: ['United States'],
     Paraguay: ['Paraguay'],
     Qatar: ['Qatar'],
@@ -75,8 +81,10 @@ function buildPairKey(teamA, teamB) {
     return `${a}|${b}`;
 }
 function buildScheduleNameAliases(team) {
-    const aliases = TEAM_NAME_MAP[team] ?? [team];
-    return aliases.map((alias) => normalizeName(alias));
+    // Always include the team's own schedule name in addition to any mapped aliases,
+    // since some data sources use the same name as the schedule (e.g. "USA").
+    const aliases = [team, ...(TEAM_NAME_MAP[team] ?? [])];
+    return [...new Set(aliases.map((alias) => normalizeName(alias)))];
 }
 function parseDateOnlyToUtc(date) {
     const [yearStr, monthStr, dayStr] = date.split('-');
@@ -142,6 +150,9 @@ async function fetchResultsFromSource(schedule) {
         });
         pairResults.set(key, existingResults);
     }
+    return matchPairResultsToSchedule(schedule, pairResults);
+}
+function matchPairResultsToSchedule(schedule, pairResults) {
     const results = [];
     for (const match of schedule) {
         const homeAliases = buildScheduleNameAliases(match.homeTeam);
@@ -186,6 +197,40 @@ async function fetchResultsFromSource(schedule) {
     }
     return results.sort((a, b) => a.matchId - b.matchId);
 }
+async function fetchResultsFromOpenFootball(schedule) {
+    const response = await axios_1.default.get(OPENFOOTBALL_WORLD_CUP_URL, {
+        headers: {
+            'User-Agent': 'JA-WC-board/1.0 (+local dashboard)',
+        },
+    });
+    const matches = response.data.matches ?? [];
+    const pairResults = new Map();
+    for (const match of matches) {
+        const home = match.team1;
+        const away = match.team2;
+        const ft = match.score?.ft;
+        if (!home ||
+            !away ||
+            !Array.isArray(ft) ||
+            ft.length !== 2 ||
+            typeof ft[0] !== 'number' ||
+            typeof ft[1] !== 'number') {
+            continue;
+        }
+        const date = (match.date ?? '').slice(0, 10);
+        const key = buildPairKey(home, away);
+        const existingResults = pairResults.get(key) ?? [];
+        existingResults.push({
+            home,
+            away,
+            homeScore: ft[0],
+            awayScore: ft[1],
+            date,
+        });
+        pairResults.set(key, existingResults);
+    }
+    return matchPairResultsToSchedule(schedule, pairResults);
+}
 function mergeResults(existingResults, fetchedResults) {
     const merged = new Map();
     for (const result of existingResults) {
@@ -202,14 +247,26 @@ function mergeResults(existingResults, fetchedResults) {
 }
 async function loadPreferredResults(schedule, resultsPath = (0, resultLoader_1.getDefaultResultsPath)()) {
     const existingResults = await (0, resultLoader_1.loadResults)(resultsPath);
+    // Combine sources, lowest to highest priority, so each later source overrides the
+    // previous for matches it covers, and fills in matches the others are missing:
+    //   local CSV  <  martj42 community CSV  <  openfootball (primary)
+    // This way a match missing from openfootball is still populated from martj42.
+    let combined = existingResults;
     try {
-        const fetchedResults = await fetchResultsFromSource(schedule);
-        return mergeResults(existingResults, fetchedResults);
+        const martjResults = await fetchResultsFromSource(schedule);
+        combined = mergeResults(combined, martjResults);
     }
     catch (err) {
-        console.warn('Failed to fetch fresher results from source, using local results.csv', err);
-        return existingResults;
+        console.warn('Failed to fetch results from community CSV source', err);
     }
+    try {
+        const openFootballResults = await fetchResultsFromOpenFootball(schedule);
+        combined = mergeResults(combined, openFootballResults);
+    }
+    catch (err) {
+        console.warn('Failed to fetch results from openfootball, using community CSV / local results', err);
+    }
+    return combined;
 }
 async function writeResultsCsv(resultsFilePath, results) {
     const lines = ['Match,HomeTeam,AwayTeam,HomeGoals,AwayGoals'];

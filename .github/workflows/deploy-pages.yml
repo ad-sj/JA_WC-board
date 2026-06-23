@@ -45,6 +45,8 @@ jobs:
 
       - name: Build static dashboard
         run: npm run generate:static-data
+        env:
+          THESPORTSDB_API_KEY: ${{ secrets.THESPORTSDB_API_KEY }}
 
       - name: Set Pages base path
         run: |
